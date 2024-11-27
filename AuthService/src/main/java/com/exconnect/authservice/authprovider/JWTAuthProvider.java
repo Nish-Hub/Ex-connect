@@ -1,7 +1,9 @@
 package com.exconnect.authservice.authprovider;
 
+
 import com.exconnect.authservice.exceptions.InvalidTokenException;
 import com.exconnect.authservice.exceptions.TokenExpiredException;
+import com.exconnect.entities.UserDTO;
 import com.exconnect.util.cryptokey.KeyGenerator;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtParser;
@@ -16,28 +18,37 @@ import java.util.Map;
 
 @Slf4j
 @Component("JwtAuth")
-public class JWTAuthProvider implements IAuthProvider {
+public class JWTAuthProvider implements IAuthProvider<UserDTO> {
 
     final String secretKey = KeyGenerator.generateSymmetricKey();
     final TokenExpiry tokenExpiry = new TokenExpiry();
-    long expirationTimeInMillis = 1000 * 60 * 60;
+    final long expirationTimeInMillis = 1000 * 60 * 60;
 
-    public String createToken(String userId, String username, String userRole) {
+    public String createToken(UserDTO userDTO) {
+
+       return this.createToken(userDTO,expirationTimeInMillis);
+
+
+    }
+
+    public String createToken(UserDTO userDTO,long tokenExpirationTimeInMillis) {
 
         Date now = new Date();
         String jwtToken = Jwts.builder()
                 .setHeader(Map.of("typ", "JWT"))
-                .setSubject(userId)
-                .claim("username", username)
-                .claim("role", userRole)
+                .setSubject(userDTO.getUserId())
+                .claim("username", userDTO.getUserName())
+                .claim("role", userDTO.getUserRoles())
                 .setIssuedAt(now)
-                .setExpiration(tokenExpiry.createExpiryDate(now))
+                .setExpiration(tokenExpiry.createExpiryDate(now,tokenExpirationTimeInMillis))
                 .signWith(SignatureAlgorithm.ES256, secretKey)
                 .compact();
         return jwtToken;
 
 
     }
+
+
 
     public void validateToken(String token) throws TokenExpiredException, InvalidTokenException {
 
@@ -85,9 +96,9 @@ public class JWTAuthProvider implements IAuthProvider {
 
         Date oldDate = new Date(oldDateMillis);
 
-        public Date createExpiryDate(Date now) {
+        public Date createExpiryDate(Date now,long tokenExpirationTime) {
 
-            Date expiryDate = new Date(now.getTime() + expirationTimeInMillis);
+            Date expiryDate = new Date(now.getTime() + tokenExpirationTime);
             return expiryDate;
         }
 
