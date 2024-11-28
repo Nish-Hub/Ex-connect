@@ -9,5 +9,5 @@ public interface IAuthProvider<T> {
 
     public void validateToken(String token) throws TokenExpiredException, InvalidTokenException;
 
-    public String invalidateToken(String token);
+    public String invalidateToken(String token) throws InvalidTokenException, TokenExpiredException;
 }

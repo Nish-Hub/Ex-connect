@@ -3,14 +3,19 @@ package com.exconnect.authservice.controller;
 import com.exconnect.authservice.exceptions.InvalidTokenException;
 import com.exconnect.authservice.exceptions.TokenExpiredException;
 import com.exconnect.authservice.service.AuthService;
+import com.exconnect.dto.TokenRequest;
+import com.exconnect.dto.UserDTO;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,66 +26,38 @@ public class AuthController {
 
     private final AuthService authService;
 
-    private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService executorService ;
 
     @Autowired
-    private AuthController(AuthService authService) {
+    private AuthController(AuthService authService,ExecutorService executorService) {
         this.authService = authService;
+        this.executorService = executorService;
     }
 
     @PostMapping("/generateToken")
-    public ResponseEntity<String> generateToken(Map<String, String> requestMap) {
+    public ResponseEntity<String> generateToken(@RequestBody @Valid UserDTO userDTO) throws ExecutionException, InterruptedException {
 
-        try {
-            String token = executorService.submit(() -> this.authService.generateToken(requestMap)).get();
+            String token = executorService.submit(() -> this.authService.generateToken(userDTO)).get();
             return ResponseEntity.ok(token);
-        } catch (InterruptedException e) {
-            log.error("Interrupted Exception ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Token generation interrupted");
-        } catch (ExecutionException e) {
-            log.error("Execution Exception ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
 
     }
 
     @PostMapping("/validateToken")
-    public ResponseEntity<String> validateToken(String token) {
+    public ResponseEntity<String> validateToken(@RequestBody @Valid TokenRequest tokenRequest) throws ExecutionException, InterruptedException {
 
-        try {
             return executorService.submit(() -> {
-                try {
-                    this.authService.validateToken(token);
+                    this.authService.validateToken(tokenRequest.getToken());
                     return ResponseEntity.ok("Token valid");
-                } catch (InvalidTokenException e) {
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Token Invalid");
-                } catch (TokenExpiredException e) {
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Token Expired");
-                }
             }).get();
-        } catch (InterruptedException e) {
-            log.error("Interrupted Exception ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Token generation interrupted");
-        } catch (ExecutionException e) {
-            log.error("Execution Exception ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
 
     }
 
     @PostMapping("/invalidateToken")
-    public ResponseEntity<String> invalidateToken(String token) {
+    public ResponseEntity<String> invalidateToken(@RequestBody @Valid TokenRequest tokenRequest) throws ExecutionException, InterruptedException {
 
-        try {
-            String expiredToken = executorService.submit(() -> this.authService.invalidateToken(token)).get();
+            String expiredToken = executorService.submit(() -> this.authService.invalidateToken(tokenRequest.getToken())).get();
             return ResponseEntity.ok(expiredToken);
-        } catch (InterruptedException e) {
-            log.error("Interrupted Exception ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Token generation interrupted");
-        } catch (ExecutionException e) {
-            log.error("Execution Exception ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+
     }
 
 }

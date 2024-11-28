@@ -1,10 +1,11 @@
 package com.exconnect.authservice.authprovider;
 
 
+import com.exconnect.authservice.util.cryptokey.KeyGenerator;
 import com.exconnect.authservice.exceptions.InvalidTokenException;
 import com.exconnect.authservice.exceptions.TokenExpiredException;
-import com.exconnect.entities.UserDTO;
-import com.exconnect.util.cryptokey.KeyGenerator;
+import com.exconnect.dto.UserDTO;
+//import com.exconnect.util.cryptokey.KeyGenerator;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
@@ -24,11 +25,11 @@ public class JWTAuthProvider implements IAuthProvider<UserDTO> {
     final TokenExpiry tokenExpiry = new TokenExpiry();
     final long expirationTimeInMillis = 1000 * 60 * 60;
 
+    final String validTokenFormat = "[a-zA-Z0-9\\-_.]+";
+
     public String createToken(UserDTO userDTO) {
 
        return this.createToken(userDTO,expirationTimeInMillis);
-
-
     }
 
     public String createToken(UserDTO userDTO,long tokenExpirationTimeInMillis) {
@@ -52,6 +53,8 @@ public class JWTAuthProvider implements IAuthProvider<UserDTO> {
 
     public void validateToken(String token) throws TokenExpiredException, InvalidTokenException {
 
+        this.isValidToken(token);
+
         int clockSkewSeconds = 60;
         try {
             Jwts.parserBuilder()
@@ -72,8 +75,9 @@ public class JWTAuthProvider implements IAuthProvider<UserDTO> {
     }
 
     // TODO:  true invalidation without reissuing tokens, consider token blacklisting or other stateful approaches. This will help to maintain active user list as well
-    public String invalidateToken(String token) {
+    public String invalidateToken(String token) throws InvalidTokenException, TokenExpiredException {
 
+        this.validateToken(token);
 
         JwtParser jwtParser = Jwts.parserBuilder()
                 .setSigningKey(secretKey)
@@ -89,7 +93,21 @@ public class JWTAuthProvider implements IAuthProvider<UserDTO> {
 
     }
 
-    class TokenExpiry {
+    private boolean isValidToken(String token) throws InvalidTokenException {
+        if (token == null || token.isBlank()) {
+            throw new InvalidTokenException("Token cannot be null or blank");
+        }
+
+        // Format validation (e.g., regex for allowed characters)
+        if (!token.matches(validTokenFormat)) {
+            throw new InvalidTokenException("Token format is invalid");
+        }
+
+        return true; // Valid if no exceptions are thrown
+    }
+
+
+    static class TokenExpiry {
 
         // Represent Jan 1, 2000, in milliseconds since epoch
         long oldDateMillis = 946684800000L; // Jan 1, 2000, 00:00:00 UTC

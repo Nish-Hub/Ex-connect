@@ -3,14 +3,11 @@ package com.exconnect.authservice.service;
 import com.exconnect.authservice.authprovider.IAuthProvider;
 import com.exconnect.authservice.exceptions.InvalidTokenException;
 import com.exconnect.authservice.exceptions.TokenExpiredException;
-import com.exconnect.entities.UserDTO;
+import com.exconnect.dto.UserDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-
-import java.util.Arrays;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -24,12 +21,11 @@ public class AuthService {
         this.authProvider = authProvider;
     }
 
-    public String generateToken(Map<String, String> requestMap) {
-        String userId = requestMap.get("userId");
-        String userName = requestMap.get("userName");
-        String userRole = requestMap.get("userRole"); // Assuming we have a single role or multiple roles concatenated
+    public String generateToken(UserDTO userDTO) {
 
-        return this.authProvider.createToken(UserDTO.builder().userId(userId).userName(userName).userRoles(Arrays.asList(userRole.split(","))));
+        return this.authProvider.createToken(UserDTO.builder().userId(userDTO.getUserId())
+                .userName(userDTO.getUserName())
+                .userRoles(userDTO.getUserRoles()));
     }
 
     public void validateToken(String token) throws InvalidTokenException, TokenExpiredException {
@@ -37,7 +33,7 @@ public class AuthService {
         this.authProvider.validateToken(token);
     }
 
-    public String invalidateToken(String token) {
+    public String invalidateToken(String token) throws InvalidTokenException, TokenExpiredException {
 
         return this.authProvider.invalidateToken(token);
     }
