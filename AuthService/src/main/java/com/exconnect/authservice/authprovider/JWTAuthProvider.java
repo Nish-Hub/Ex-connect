@@ -1,6 +1,8 @@
 package com.exconnect.authservice.authprovider;
 
 
+import com.exconnect.authservice.persistence.IInvalidTokenPersistence;
+import com.exconnect.authservice.persistence.ITokenPersistence;
 import com.exconnect.authservice.util.cryptokey.KeyGenerator;
 import com.exconnect.authservice.exceptions.InvalidTokenException;
 import com.exconnect.authservice.exceptions.TokenExpiredException;
@@ -30,13 +32,13 @@ public class JWTAuthProvider implements IAuthProvider<UserDTO> {
     final String validTokenFormat = "[a-zA-Z0-9\\-_.]+";
 
     @Autowired
-    private RedisTemplate<String,Object> redisTemplate;
+    private ITokenPersistence iTokenPersistence;
 
     public String createToken(UserDTO userDTO) {
 
        String token = this.createToken(userDTO,expirationTimeInMillis);
        // TODO: Hash the token and then save in db
-       redisTemplate.opsForHash().putAll("token:"+token,Map.of("userid",userDTO.getUserId()));
+       iTokenPersistence.persistToken("token:"+token,Map.of("userid",userDTO.getUserId()));
        // TODO: fire create token event and handle in guava event
        return token;
     }
@@ -87,6 +89,8 @@ public class JWTAuthProvider implements IAuthProvider<UserDTO> {
     public String invalidateToken(String token) throws InvalidTokenException, TokenExpiredException {
 
         this.validateToken(token);
+
+        iTokenPersistence.removeToken("token:"+token);
 
         JwtParser jwtParser = Jwts.parserBuilder()
                 .setSigningKey(secretKey)

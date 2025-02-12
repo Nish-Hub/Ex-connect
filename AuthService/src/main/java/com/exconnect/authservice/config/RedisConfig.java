@@ -1,4 +1,4 @@
-package com.exconnect.authservice.redisclient;
+package com.exconnect.authservice.config;
 
 
 import org.springframework.beans.factory.annotation.Value;
