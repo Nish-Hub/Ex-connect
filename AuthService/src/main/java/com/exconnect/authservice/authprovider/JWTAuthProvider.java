@@ -12,6 +12,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -27,9 +29,16 @@ public class JWTAuthProvider implements IAuthProvider<UserDTO> {
 
     final String validTokenFormat = "[a-zA-Z0-9\\-_.]+";
 
+    @Autowired
+    private RedisTemplate<String,Object> redisTemplate;
+
     public String createToken(UserDTO userDTO) {
 
-       return this.createToken(userDTO,expirationTimeInMillis);
+       String token = this.createToken(userDTO,expirationTimeInMillis);
+       // TODO: Hash the token and then save in db
+       redisTemplate.opsForHash().putAll("token:"+token,Map.of("userid",userDTO.getUserId()));
+       // TODO: fire create token event and handle in guava event
+       return token;
     }
 
     public String createToken(UserDTO userDTO,long tokenExpirationTimeInMillis) {

@@ -1,0 +1,12 @@
+spring:
+  data:
+   redis:
+    host: 127.0.0.1
+    port: 6379
+  #  password: yourpassword
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        time-between-eviction-runs: 30000ms
